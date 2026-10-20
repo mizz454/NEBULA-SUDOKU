@@ -1,0 +1,116 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>NEBULA SUDOKU — Лаборатория логики</title>
+<style>
+@import url('https://fonts.googleapis.com/css2?family=Comfortaa:wght@400;600;700&family=Orbitron:wght@500;700;900&display=swap');
+:root{--bg:#090b1c;--panel:#131630;--line:#353b70;--cyan:#62f5ff;--pink:#ff6edb;--gold:#ffe58a;--text:#eef1ff;--muted:#a4a9ca}
+*{box-sizing:border-box}
+body{margin:0;min-height:100vh;color:var(--text);font-family:Comfortaa,system-ui,sans-serif;background:radial-gradient(ellipse at 15% 10%,#25215a 0,transparent 38%),radial-gradient(ellipse at 85% 70%,#30164b 0,transparent 35%),var(--bg);overflow-x:hidden}
+body:before{content:"";position:fixed;inset:0;pointer-events:none;opacity:.35;background-image:radial-gradient(#fff 1px,transparent 1px);background-size:37px 37px}
+.wrap{max-width:1100px;margin:auto;padding:24px 16px 40px;position:relative}
+header{text-align:center;margin-bottom:22px}
+.kicker{font:700 11px Orbitron;letter-spacing:4px;color:var(--cyan)}
+h1{font:900 clamp(25px,5vw,46px) Orbitron;margin:12px 0;background:linear-gradient(90deg,var(--cyan),#fff,var(--pink));color:transparent;background-clip:text}
+.sub{color:var(--muted);font-size:13px}
+.layout{display:grid;grid-template-columns:minmax(280px,1fr) 300px;gap:18px;align-items:start}
+.card{background:linear-gradient(145deg,#171a39ed,#0f1129ed);border:1px solid #454a82;border-radius:22px;padding:18px;box-shadow:0 15px 45px #0005,inset 0 0 25px #747cff0a}
+.topbar{display:flex;justify-content:space-between;align-items:center;gap:8px;margin-bottom:14px;flex-wrap:wrap}
+.pill{border:1px solid var(--line);border-radius:99px;padding:8px 12px;color:var(--cyan);font-size:12px}
+#board{display:grid;grid-template-columns:repeat(9,1fr);aspect-ratio:1;border:2px solid var(--cyan);border-radius:10px;overflow:hidden;box-shadow:0 0 22px #62f5ff22}
+.cell{min-width:0;aspect-ratio:1;background:#11142c;border:0;border-right:1px solid #34385d;border-bottom:1px solid #34385d;color:#eaf0ff;font:600 clamp(12px,2.8vw,22px) Orbitron;text-align:center;outline:none;padding:0}
+.cell:nth-child(3n){border-right:2px solid #777cc0}.cell:nth-child(n+19):nth-child(-n+27),.cell:nth-child(n+46):nth-child(-n+54){border-bottom:2px solid #777cc0}
+.cell.given{background:#24294b;color:var(--gold);font-weight:900}
+.cell.selected{background:#28415a!important;box-shadow:inset 0 0 0 2px var(--cyan)}
+.cell.related{background:#1b2140}.cell.same{background:#45315a;color:var(--pink)}
+.cell.error{background:#5b233d!important;color:#ff9abf}
+.cell:focus{background:#244255}
+.controls{display:grid;grid-template-columns:repeat(3,1fr);gap:7px;margin-top:13px}
+button{font:600 12px Comfortaa;color:var(--text);border:1px solid #4a4f85;background:#202448;border-radius:12px;padding:11px 8px;cursor:pointer;transition:.15s}
+button:hover{border-color:var(--cyan);transform:translateY(-1px);box-shadow:0 0 14px #62f5ff22}
+button.primary{background:linear-gradient(100deg,#087f94,#5a3488);border-color:#69e9ff}
+button:disabled{opacity:.4;cursor:default;transform:none}
+.side h2{font:700 14px Orbitron;color:var(--pink);letter-spacing:1px;margin:0 0 12px}
+.statrow{display:flex;justify-content:space-between;color:var(--muted);font-size:12px;margin:10px 0}
+.statrow strong{color:var(--text)}
+#timer{font:700 25px Orbitron;color:var(--gold)}
+.note{font-size:11px;color:var(--muted);line-height:1.6}
+.numpad{display:grid;grid-template-columns:repeat(3,1fr);gap:7px;margin:14px 0}
+.numpad button{font:700 18px Orbitron;padding:12px}
+.sound{display:flex;align-items:center;justify-content:space-between;gap:10px;margin-top:12px}
+.switch{font-size:11px}
+.overlay{position:fixed;inset:0;background:#050614d9;display:none;place-items:center;padding:18px;z-index:10;backdrop-filter:blur(8px)}
+.overlay.show{display:grid}
+.result{max-width:470px;width:100%;text-align:center;background:linear-gradient(145deg,#202653,#15132f);border:1px solid var(--cyan);border-radius:24px;padding:26px;box-shadow:0 0 55px #62f5ff30}
+.result .seal{font-size:48px;filter:drop-shadow(0 0 15px #ffe58a)}
+.result h2{font:900 23px Orbitron;color:var(--gold)}
+.result p{line-height:1.6;color:#d6dbf7;font-size:13px}
+#certName{font:700 17px Orbitron;color:var(--cyan);margin:18px 0}
+@media(max-width:760px){.layout{grid-template-columns:1fr}.side{display:grid;grid-template-columns:1fr 1fr;gap:12px}.side .card{padding:14px}.numpad{grid-column:1/-1}.cell{font-size:clamp(11px,4vw,20px)}}
+</style>
+</head>
+<body>
+<div class="wrap">
+<header><div class="kicker">LOGIC • COSMIC TRAINING</div><h1>NEBULA SUDOKU</h1><div class="sub">Расшифруй девять орбит. Докажи, что твой разум — сверхновая.</div></header>
+<div class="layout">
+<section class="card">
+ <div class="topbar"><span class="pill" id="level">МИССИЯ: NOVICE</span><span class="pill">Ошибки: <b id="mistakes">0</b>/3</span></div>
+ <div id="board" aria-label="Поле судоку"></div>
+ <div class="controls">
+  <button class="primary" id="check">Проверить</button><button id="hint">Подсказка ✦</button><button id="erase">Стереть</button>
+  <button id="new">Новая миссия</button><button id="notes">Заметки: выкл.</button><button id="solve">Сдаться?</button>
+ </div>
+</section>
+<aside class="side">
+ <section class="card">
+  <h2>КОНСОЛЬ МИССИИ</h2>
+  <div class="statrow"><span>Время полёта</span><strong id="timer">00:00</strong></div>
+  <div class="statrow"><span>Заполнено</span><strong id="progress">0 / 81</strong></div>
+  <div class="statrow"><span>Подсказки</span><strong id="hints">0</strong></div>
+  <p class="note">Выбери клетку, затем нажми цифру на панели. Золотые цифры — часть загадки. Три ошибки — миссия завершена.</p>
+  <div class="sound"><span class="note">Звуки интерфейса</span><button class="switch" id="sound">🔊 Вкл.</button></div>
+ </section>
+ <section class="card">
+  <h2>ЦИФРОВОЙ КЛЮЧ</h2>
+  <div class="numpad" id="numpad"></div>
+  <p class="note">Правило: цифры 1–9 должны встретиться по одному разу в каждой строке, колонке и квадрате 3×3.</p>
+ </section>
+</aside>
+</div>
+</div>
+<div class="overlay" id="overlay"><div class="result"><div class="seal" id="seal">✦</div><h2 id="resultTitle">МИССИЯ ВЫПОЛНЕНА</h2><p id="resultText"></p><div id="certName">NEBULA • LOGIC PILOT</div><p id="resultStats"></p><button class="primary" id="print">Сохранить сертификат / печать</button> <button id="close">Закрыть</button><button id="again">Ещё миссию</button></div></div>
+<script>
+const $=id=>document.getElementById(id);
+let puzzle=[],solution=[],values=[],selected=-1,notesMode=false,notes=[],mistakes=0,hints=0,seconds=0,timerId=null,muted=false,finished=false;
+let audio;
+function beep(freq=520,dur=.08,type='sine'){if(muted)return;try{audio=audio||new(window.AudioContext||window.webkitAudioContext)();let o=audio.createOscillator(),g=audio.createGain();o.type=type;o.frequency.value=freq;g.gain.setValueAtTime(.07,audio.currentTime);g.gain.exponentialRampToValueAtTime(.001,audio.currentTime+dur);o.connect(g);g.connect(audio.destination);o.start();o.stop(audio.currentTime+dur)}catch(e){}}
+function shuffle(a){for(let i=a.length-1;i>0;i--){let j=Math.random()*(i+1)|0;[a[i],a[j]]=[a[j],a[i]]}return a}
+function makeSolution(){let base=[0,1,2,3,4,5,6,7,8],r=shuffle([0,1,2]),rows=[...r.map(x=>x*3),...r.map(x=>x*3+1),...r.map(x=>x*3+2)]; // shuffle bands/rows properly
+ let bands=shuffle([0,1,2]),rr=[];bands.forEach(b=>shuffle([0,1,2]).forEach(x=>rr.push(b*3+x)));
+ let stacks=shuffle([0,1,2]),cc=[];stacks.forEach(b=>shuffle([0,1,2]).forEach(x=>cc.push(b*3+x)));
+ let nums=shuffle([1,2,3,4,5,6,7,8,9]);return rr.flatMap(y=>cc.map(x=>nums[(x*3+Math.floor(x/3)+y)%9]));}
+function validGrid(g,pos,n){let r=Math.floor(pos/9),c=pos%9;for(let i=0;i<9;i++){if(g[r*9+i]===n||g[i*9+c]===n)return false}let br=Math.floor(r/3)*3,bc=Math.floor(c/3)*3;for(let y=br;y<br+3;y++)for(let x=bc;x<bc+3;x++)if(g[y*9+x]===n)return false;return true}
+function solveGrid(g){let p=g.indexOf(0);if(p<0)return true;for(let n=1;n<=9;n++)if(validGrid(g,p,n)){g[p]=n;if(solveGrid(g))return true;g[p]=0}return false}
+function newGame(){clearInterval(timerId);seconds=0;mistakes=0;hints=0;finished=false;selected=-1;notesMode=false;$('notes').textContent='Заметки: выкл.';$('overlay').classList.remove('show');
+ solution=makeSolution();puzzle=solution.slice();let remove=42;shuffle([...Array(81).keys()]).slice(0,remove).forEach(i=>puzzle[i]=0);values=puzzle.slice();notes=Array.from({length:81},()=>new Set());$('level').textContent='МИССИЯ: NOVICE';timerId=setInterval(()=>{if(!finished){seconds++;$('timer').textContent=fmt(seconds)}},1000);render();stats();beep(660,.13)}
+function fmt(s){return String(s/60|0).padStart(2,'0')+':'+String(s%60).padStart(2,'0')}
+function render(){let b=$('board');b.innerHTML='';for(let i=0;i<81;i++){let el=document.createElement('input');el.className='cell'+(puzzle[i]?' given':'');el.value=values[i]||'';el.inputMode='none';el.maxLength=1;el.readOnly=true;el.dataset.i=i;el.onclick=()=>{selected=i;render()};if(selected>=0){let sr=selected/9|0,sc=selected%9,r=i/9|0,c=i%9;if(i===selected)el.classList.add('selected');else if(r===sr||c===sc||(r/3|0)===(sr/3|0)&&(c/3|0)===(sc/3|0))el.classList.add('related');if(values[i]&&values[i]===values[selected])el.classList.add('same')}if(values[i]&&!puzzle[i]&&values[i]!==solution[i])el.classList.add('error');if(notes[i].size&&!values[i])el.value=[...notes[i]].sort().join('');b.appendChild(el)}}
+function stats(){$('mistakes').textContent=mistakes;$('hints').textContent=hints;$('progress').textContent=values.filter(Boolean).length+' / 81'}
+function enter(n){if(finished||selected<0||puzzle[selected])return;if(notesMode){if(notes[selected].has(n))notes[selected].delete(n);else notes[selected].add(n);beep(400,.05);render();return}if(values[selected]===n){values[selected]=0}else values[selected]=n;if(n!==solution[selected]){mistakes++;beep(170,.18,'triangle');if(mistakes>=3){finish(false);return}}else beep(740,.08);stats();render();if(values.every((v,i)=>v===solution[i]))finish(true)}
+function finish(win){finished=true;clearInterval(timerId);$('overlay').classList.add('show');$('seal').textContent=win?'🏅':'🛰️';$('resultTitle').textContent=win?'СЕРТИФИКАТ ВЫДАН!':'СИГНАЛ ПОТЕРЯН';$('resultText').textContent=win?'Ты расшифровал все орбиты и получил звание пилота логики.':'Три сбоя подряд! Космическая станция отправляет тебя на тренировку — попробуй снова.';$('certName').textContent=win?'NEBULA • MASTER OF LOGIC':'NEBULA • ROOKIE PILOT';$('resultStats').textContent=`Время: ${fmt(seconds)} • Подсказки: ${hints} • Ошибки: ${mistakes}`;beep(win?880:220,.3,win?'sine':'triangle')}
+function hint(){if(finished)return;if(selected<0){alert('Сначала выбери пустую клетку!');return}if(puzzle[selected]){alert('Это исходная цифра. Выбери пустую клетку.');return}values[selected]=solution[selected];hints++;beep(820,.1);stats();render();if(values.every((v,i)=>v===solution[i]))finish(true)}
+$('check').onclick=()=>{if(finished)return;let wrong=values.some((v,i)=>v&&v!==solution[i]);if(wrong){beep(230,.12,'triangle');alert('Есть неверные цифры — они подсвечены розовым.');}else{beep(620,.1);alert('Пока всё верно! Продолжай расшифровку.')}};
+$('hint').onclick=hint;$('erase').onclick=()=>{if(selected>=0&&!puzzle[selected]){values[selected]=0;notes[selected].clear();render();stats();beep(300,.06)}};
+$('new').onclick=newGame;$('notes').onclick=()=>{notesMode=!notesMode;$('notes').textContent='Заметки: '+(notesMode?'вкл.':'выкл.');beep(450,.06)};
+$('solve').onclick=()=>{if(confirm('Показать решение? Миссия завершится.')){values=solution.slice();render();stats();finish(false)}};
+$('sound').onclick=()=>{muted=!muted;$('sound').textContent=muted?'🔇 Выкл.':'🔊 Вкл.';if(!muted)beep()};
+$('close').onclick=()=>$('overlay').classList.remove('show');$('again').onclick=newGame;
+$('print').onclick=()=>window.print();
+for(let n=1;n<=9;n++){let btn=document.createElement('button');btn.textContent=n;btn.onclick=()=>enter(n);$('numpad').appendChild(btn)}
+document.addEventListener('keydown',e=>{if(e.key>='1'&&e.key<='9')enter(+e.key);if(e.key==='Backspace'||e.key==='Delete')$('erase').click();if(e.key.startsWith('Arrow')&&selected>=0){let d=e.key==='ArrowLeft'?-1:e.key==='ArrowRight'?1:e.key==='ArrowUp'?-9:9;selected=Math.max(0,Math.min(80,selected+d));render()}});
+newGame();
+</script>
+<style>@media print{body{background:white;color:#111}.wrap,.overlay{display:none!important}#overlay.show{display:grid!important;position:static;background:white}.result{box-shadow:none;background:white;color:#111;border:2px solid #333}.result p{color:#111}button{display:none}}</style>
+</body></html>
